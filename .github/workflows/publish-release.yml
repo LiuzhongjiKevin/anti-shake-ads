@@ -1,0 +1,54 @@
+name: Publish Android test APK release
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-v0.1.0-test
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify committed APK checksum
+        run: |
+          test -s downloads/anti-shake-ads-0.1.0-test.apk
+          echo 'd64a20f71763adef5f22fa25a64c19cb3e2b3cb8dcc79b93d4e2616e12ab3ac9  downloads/anti-shake-ads-0.1.0-test.apk' | sha256sum -c -
+      - name: Publish GitHub release with direct APK asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > /tmp/anti-shake-release-notes.md <<'EOF'
+          Android 测试版（debug 签名）。Android 8.0 及以上可安装。
+
+          下载下方“Android 安装包（测试版）”APK，安装后在系统设置中手动开启“反摇一摇广告 · 跳转保护”无障碍服务，再在应用内开启保护并选择需要保护的应用。之后从手机桌面正常打开所选应用即可。
+
+          已在 Android 10 云端模拟器用模拟广告跳转验证返回；高德地图真实开屏广告以及小米澎湃 OS、华为 EMUI 真机效果尚未完成验证。摇一摇和误点造成的跨应用跳转只能在设定时间内尝试返回，不保证每次恢复原页面。
+          EOF
+          if gh release view v0.1.0-test >/dev/null 2>&1; then
+            echo 'Release already exists; verifying existing APK asset.'
+          else
+            gh release create v0.1.0-test \
+              'downloads/anti-shake-ads-0.1.0-test.apk#Android 安装包（测试版）' \
+              --target "$GITHUB_SHA" \
+              --title 'Anti-Shake Ads v0.1.0-test' \
+              --notes-file /tmp/anti-shake-release-notes.md \
+              --prerelease
+          fi
+      - name: Download released APK and verify its checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p /tmp/anti-shake-release-verify
+          gh release download v0.1.0-test \
+            --pattern 'anti-shake-ads-0.1.0-test.apk' \
+            --dir /tmp/anti-shake-release-verify
+          echo 'd64a20f71763adef5f22fa25a64c19cb3e2b3cb8dcc79b93d4e2616e12ab3ac9  /tmp/anti-shake-release-verify/anti-shake-ads-0.1.0-test.apk' | sha256sum -c -
+          gh release view v0.1.0-test --json url,assets,isPrerelease --jq '{url: .url, prerelease: .isPrerelease, assets: [.assets[].name]}'
