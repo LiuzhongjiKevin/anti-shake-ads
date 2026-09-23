@@ -66,6 +66,7 @@ def setup():
         Path(temp).unlink(missing_ok=True)
     adb('shell','settings','put','secure','enabled_accessibility_services',GUARD+'/.GuardService')
     adb('shell','settings','put','secure','accessibility_enabled','1')
+    adb('shell','am','start','-n',GUARD+'/.MainActivity')
     for _ in range(30):
         state=adb('shell','dumpsys','accessibility')
         if 'Bound services:' in state and 'GuardService' in state.split('Bound services:',1)[1].split('Enabled services:',1)[0]:
