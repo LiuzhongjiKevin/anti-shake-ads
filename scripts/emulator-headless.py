@@ -36,7 +36,7 @@ def events():
 
 def activity_record():
     raw=adb('shell','dumpsys','activity','activities')
-    match=re.search(r'ActivityRecord\\{([a-z0-9]+) u0 '+re.escape(SOURCE)+r'/\\.MainActivity',raw)
+    match=re.search(r'ActivityRecord\{([a-z0-9]+) u0 '+re.escape(SOURCE)+r'/\.MainActivity',raw)
     if not match:
         (OUT/'last-activity.txt').write_text(raw,encoding='utf8')
         raise AssertionError('Could not identify source ActivityRecord')
@@ -44,7 +44,7 @@ def activity_record():
 
 def foreground():
     raw=adb('shell','dumpsys','window')
-    match=re.search(r'mCurrentFocus=Window\\{[^\\n]+?\\s([\\w.]+)/',raw)
+    match=re.search(r'mCurrentFocus=Window\{[^\n]+?\s([\w.]+)/',raw)
     return match.group(1) if match else None
 
 def setup():
