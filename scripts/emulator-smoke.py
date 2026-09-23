@@ -143,7 +143,10 @@ def main():
     wait_node('搜索应用名称或包名')
     tap_node('搜索应用名称或包名')
     adb('shell','input','text','fixture')
+    adb('shell','input','keyevent','KEYCODE_BACK')  # Hide IME before tapping the list row.
+    wait_node(SOURCE)
     tap_node(SOURCE)
+    wait_node('✓  ')
     tap_node('保存')
     wait_node('已选 1 个应用')
     tap_node('30秒')
