@@ -21,7 +21,7 @@
 
 | APK | 用途 |
 | --- | --- |
-| [anti-shake-ads-0.1.0-test.apk](downloads/anti-shake-ads-0.1.0-test.apk?raw=1) | 主应用，手机上显示“反摇一摇广告” |
+| [直接下载主应用 APK](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.1.0-test/anti-shake-ads-0.1.0-test.apk) | 主应用，手机上显示“反摇一摇广告” |
 | [fixture-source.apk](downloads/fixture-source.apk?raw=1) | “跳转测试源”，模拟点击、自动和摇动跳转 |
 | [fixture-target.apk](downloads/fixture-target.apk?raw=1) | “模拟广告页”，无真实广告、无联网 |
 
