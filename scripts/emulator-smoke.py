@@ -142,6 +142,18 @@ def main():
 if __name__=='__main__':
     try: main()
     except Exception:
+        for name, command in [('window', ('shell','cat','/sdcard/guard-window.xml')),
+                              ('activity', ('shell','dumpsys','activity','activities')),
+                              ('logcat', ('logcat','-d','-t','500'))]:
+            try:
+                data=adb(*command, timeout=30)
+                (OUT / f'failure-{name}.txt').write_text(data, encoding='utf-8')
+                if name=='window': print('Visible UI:',data[:5000],flush=True)
+                if name=='activity': print('Activity state:',data[-3500:],flush=True)
+                if name=='logcat':
+                    lines=[v for v in data.splitlines() if 'FATAL EXCEPTION' in v or 'cn.returnguard' in v or 'AndroidRuntime' in v]
+                    print('Relevant logcat:', '\n'.join(lines[-65:]),flush=True)
+            except Exception as error: print('Cannot collect', name, error,flush=True)
         try: screen('failure')
         except Exception: pass
         raise
