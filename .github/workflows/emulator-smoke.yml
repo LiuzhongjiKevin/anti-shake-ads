@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/emulator-smoke.yml'
       - 'scripts/emulator-smoke.py'
+      - 'scripts/emulator-headless.py'
       - 'downloads/*.apk'
   workflow_dispatch:
 permissions:
@@ -31,7 +32,7 @@ jobs:
           api-level: 30
           arch: x86_64
           target: default
-          script: python3 scripts/emulator-smoke.py
+          script: python3 scripts/emulator-headless.py
       - name: Save screen captures and test details
         if: always()
         uses: actions/upload-artifact@v4
