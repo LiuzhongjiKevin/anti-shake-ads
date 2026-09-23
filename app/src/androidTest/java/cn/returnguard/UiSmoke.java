@@ -10,9 +10,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** Platform-only instrumentation; shell grants are test setup, never production behavior. */
 public final class UiSmoke extends Instrumentation {
- private MainActivity activity;private Prefs prefs;private UiAutomation automation;
+ private String mode;private MainActivity activity;private Prefs prefs;private UiAutomation automation;
  private final StringBuilder evidence=new StringBuilder();
- @Override public void onCreate(Bundle b){super.onCreate(b);start();}
+ @Override public void onCreate(Bundle b){super.onCreate(b);mode=b==null?"":b.getString("mode","");start();}
  private void check(boolean value,String label){if(!value)throw new AssertionError(label);evidence.append("PASS ").append(label).append('\n');}
  private void shell(String command)throws Exception{try(ParcelFileDescriptor fd=automation.executeShellCommand(command);InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] bytes=new byte[2048];while(in.read(bytes)!=-1){}}}
  private void idle(){waitForIdleSync();SystemClock.sleep(450);}
@@ -21,6 +21,15 @@ public final class UiSmoke extends Instrumentation {
  private String notification(){NotificationManager m=getTargetContext().getSystemService(NotificationManager.class);for(android.service.notification.StatusBarNotification n:m.getActiveNotifications())if(n.getId()==7)return String.valueOf(n.getNotification().extras.getCharSequence(Notification.EXTRA_TITLE));return "";}
  @Override public void onStart(){Bundle result=new Bundle();try{
   automation=getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+  if("notification-denied".equals(mode)){
+   prefs=new Prefs(getTargetContext());prefs.data.edit().clear().putBoolean("enabled",true).putBoolean("background_guide_seen",true).commit();
+   activity=(MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));idle();
+   check(getTargetContext().checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED,"notification permission is genuinely denied by Android");
+   runOnMainSync(()->ProtectionNotificationService.start(activity));waitFor(ProtectionNotificationService::running,"foreground service works without notification permission");
+   check(!BackgroundSettings.notifications(getTargetContext()),"notification denial is reported honestly");
+   runOnMainSync(()->{prefs.stop();ProtectionNotificationService.stop(activity);});idle();
+   result.putString("stream",evidence+"NOTIFICATION_DENIAL_PASSED\n");finish(Activity.RESULT_OK,result);return;
+  }
   shell("settings put secure enabled_accessibility_services null");shell("settings put secure accessibility_enabled 0");
   if(Build.VERSION.SDK_INT>=33){shell("pm grant cn.returnguard android.permission.POST_NOTIFICATIONS");shell("appops set cn.returnguard ACCESS_RESTRICTED_SETTINGS allow");}
   prefs=new Prefs(getTargetContext());prefs.data.edit().clear().putBoolean("background_guide_seen",true).commit();
@@ -36,7 +45,7 @@ public final class UiSmoke extends Instrumentation {
   getTargetContext().startService(new Intent(getTargetContext(),ProtectionNotificationService.class).setAction(ProtectionNotificationService.STOP));waitFor(()->!ProtectionNotificationService.running(),"notification stop removes foreground service");check(!prefs.enabled(),"stop persists disabled preference");
   getTargetContext().startForegroundService(new Intent(getTargetContext(),ProtectionNotificationService.class));idle();check(!ProtectionNotificationService.running()&&!prefs.enabled(),"stale restart cannot override user stop");
   tap();waitFor(ProtectionNotificationService::running,"main button re-enables protection");
-  if(Build.VERSION.SDK_INT>=33){shell("appops set cn.returnguard POST_NOTIFICATION ignore");idle();check(!BackgroundSettings.notifications(getTargetContext())&&ProtectionNotificationService.running(),"denied notification permission does not masquerade as visible notification");shell("appops set cn.returnguard POST_NOTIFICATION allow");}
+
   shell("settings put secure enabled_accessibility_services null");shell("settings put secure accessibility_enabled 0");waitFor(()->!GuardService.running(),"accessibility disconnect detected");idle();check(notification().equals("需要开启无障碍"),"disconnected service is not reported as protected");
   runOnMainSync(()->prefs.data.edit().putBoolean("setup_requested",true).apply());
   getTargetContext().startService(new Intent(getTargetContext(),ProtectionNotificationService.class).setAction(ProtectionNotificationService.STOP));waitFor(()->!ProtectionNotificationService.running(),"stop works during accessibility repair");

@@ -51,6 +51,12 @@ def setup():
     for file in ['anti-shake-ads-0.2.0-test.apk','fixture-source.apk','fixture-target.apk']:
         adb('install','-r',str(Path('downloads')/file),timeout=120)
     adb('install','-r','downloads/app-debug-androidTest.apk',timeout=120)
+    if int(adb('shell','getprop','ro.build.version.sdk').strip())>=33:
+        adb('shell','pm','revoke',GUARD,'android.permission.POST_NOTIFICATIONS')
+        denial=adb('shell','am','instrument','-w','-e','mode','notification-denied',GUARD+'.test/cn.returnguard.UiSmoke',timeout=90)
+        (OUT/'notification-denial.txt').write_text(denial,encoding='utf8')
+        print(denial,flush=True)
+        assert 'NOTIFICATION_DENIAL_PASSED' in denial,'Notification permission test failed'
     output=adb('shell','am','instrument','-w',GUARD+'.test/cn.returnguard.UiSmoke',timeout=180)
     (OUT/'ui-lifecycle.txt').write_text(output,encoding='utf8')
     print(output,flush=True)
