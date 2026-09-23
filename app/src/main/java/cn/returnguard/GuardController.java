@@ -13,8 +13,8 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
  private boolean closed,queued;private String pendingSource,pendingTarget;private long pendingAt;private int pendingAttempts;
  private final Runnable sample=this::sample;
  private final BroadcastReceiver screenReceiver=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){cancel();}};
- GuardController(GuardService s){service=s;prefs=new Prefs(s);log=new EventLog(s);excluded=AppCatalog.exclusions(s);engine=new GuardEngine(prefs.window(),prefs.fallback());prefs.data.registerOnSharedPreferenceChangeListener(this);IntentFilter f=new IntentFilter(Intent.ACTION_SCREEN_OFF);if(Build.VERSION.SDK_INT>=33)s.registerReceiver(screenReceiver,f,Context.RECEIVER_NOT_EXPORTED);else s.registerReceiver(screenReceiver,f);}
- void onWindowEvent(AccessibilityEvent e){if(!closed&&(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED||e.getEventType()==AccessibilityEvent.TYPE_WINDOWS_CHANGED))queue(40);}
+ GuardController(GuardService s){service=s;prefs=new Prefs(s);android.util.Log.d("ReturnGuardTrace","connected enabled="+prefs.enabled()+" count="+prefs.sources().size()+" flags="+s.getServiceInfo().flags);log=new EventLog(s);excluded=AppCatalog.exclusions(s);engine=new GuardEngine(prefs.window(),prefs.fallback());prefs.data.registerOnSharedPreferenceChangeListener(this);IntentFilter f=new IntentFilter(Intent.ACTION_SCREEN_OFF);if(Build.VERSION.SDK_INT>=33)s.registerReceiver(screenReceiver,f,Context.RECEIVER_NOT_EXPORTED);else s.registerReceiver(screenReceiver,f);}
+ void onWindowEvent(AccessibilityEvent e){trace("event="+e.getEventType()+" enabled="+prefs.active());if(!closed&&(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED||e.getEventType()==AccessibilityEvent.TYPE_WINDOWS_CHANGED))queue(40);}
  private void queue(long delay){if(!queued&&!closed){queued=true;handler.postDelayed(sample,delay);}}
  private String activePackage(){
   try{
