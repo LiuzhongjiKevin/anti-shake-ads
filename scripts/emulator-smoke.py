@@ -85,7 +85,7 @@ def test_jump(label,button):
     before=hierarchy()
     field=next((n for n in before.iter('node') if '输入文字，返回后检查是否保留' in n.get('text','') or
                 '输入文字，返回后检查是否保留' in n.get('content-desc','')),None)
-    if field:
+    if field is not None:
         match=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',field['bounds'])
         if match:
             x1,y1,x2,y2=map(int,match.groups())
@@ -111,7 +111,7 @@ def test_jump(label,button):
     assert result[0]['result'].startswith('已回到原应用'), result[0]
     end_xml=ET.tostring(hierarchy(),encoding='unicode')
     assert instance.group(1) in end_xml, f'Activity was recreated after {label}'
-    if field: assert 'cloudtest123' in end_xml, f'Text not preserved after {label}'
+    if field is not None: assert 'cloudtest123' in end_xml, f'Text not preserved after {label}'
     print(json.dumps({'case':label,'result':result[0], 'same_instance':True},ensure_ascii=False))
 
 
