@@ -1,6 +1,6 @@
 # Validation — 0.1.0-test
 
-Validation date: 2026-09-22. This is an installable **debug prototype**, not a device-qualified release.
+Initial validation date: 2026-09-22. Cloud integration update: 2026-09-23. This is an installable **debug prototype**, not a device-qualified release.
 
 ## Completed checks
 
@@ -16,11 +16,19 @@ Validation date: 2026-09-22. This is an installable **debug prototype**, not a d
 - JDK 17.0.13, Gradle 8.9, Android Gradle Plugin 8.7.3.
 - Android platform 35 and Build Tools 35.0.0.
 - A clean Gradle Wrapper distribution download timed out in the execution environment. The successful build used the already installed official Gradle 8.9 distribution. Wrapper files are included but a fresh Wrapper download is not claimed as verified.
-- No connected Android device (`adb devices` returned an empty list). No emulator/device execution was performed.
+- Initial local build had no connected Android device. A later GitHub Actions Android 10 emulator integration run is recorded below.
+
+## Cloud emulator integration (2026-09-23)
+
+- [GitHub Actions run 35819353058](https://github.com/LiuzhongjiKevin/anti-shake-ads/actions/runs/35819353058) completed successfully on an Android 10 emulator. The workflow installs the same three committed debug APKs and configures this app's settings and AccessibilityService inside the temporary test emulator.
+- The system reported that the accessibility service was **bound**. Opening the fixture source from Home, then pressing its immediate simulated ad jump returned to the source with **one Back action**, an event-log duration of **462 ms**, and the same Android `ActivityRecord` token before and after.
+- The delayed simulated jump (one second after pressing the test button) likewise returned with **one Back action**, an event-log duration of **321 ms**, and the same source `ActivityRecord` token.
+- This headless integration run did **not** assert preservation of typed text, scroll position, or a real advertisement. The recorded duration measures the app's return chain after it starts recovery, not total time from a physical shake or user tap. The two fixture apps contain no real ads.
+- Earlier Android 15 emulator attempts were inconclusive: setting the secure accessibility setting through ADB left the service binding or the automation incomplete. That result does not prove whether a user-enabled service works on Android 15.
 
 ## Not yet verified
 
-Installation and UI rendering on a phone; actual AccessibilityService event timing; vendor background restrictions; Back behavior across real app task stacks; exact text/scroll/page restoration; physical shake integration; split screen and work profiles. The source and target fixtures and the protocol in `TESTING.md` are provided for these checks.
+Installation and UI rendering on a phone; vendor background restrictions; Back behavior across real apps such as 高德地图; exact text/scroll/page restoration; physical shake integration; split screen and work profiles. The source and target fixtures and the protocol in `TESTING.md` are provided for these checks.
 
 The 26 tests exercise the pure state machine. They do **not** constitute 26 Android integration or real-ad tests. Foreground package equality does not prove restoration of the original page.
 
