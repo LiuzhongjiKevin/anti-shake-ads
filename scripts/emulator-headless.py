@@ -48,12 +48,17 @@ def foreground():
     return match.group(1) if match else None
 
 def setup():
-    for file in ['anti-shake-ads-0.1.0-test.apk','fixture-source.apk','fixture-target.apk']:
+    for file in ['anti-shake-ads-0.2.0-test.apk','fixture-source.apk','fixture-target.apk']:
         adb('install','-r',str(Path('downloads')/file),timeout=120)
-    adb('shell','am','start','-n',GUARD+'/.MainActivity')
+    adb('install','-r','downloads/app-debug-androidTest.apk',timeout=120)
+    output=adb('shell','am','instrument','-w',GUARD+'.test/cn.returnguard.UiSmoke',timeout=180)
+    (OUT/'ui-lifecycle.txt').write_text(output,encoding='utf8')
+    print(output,flush=True)
+    assert 'UI_LIFECYCLE_PASSED' in output, 'UI lifecycle test failed'
+    screenshot('home-enabled')
     adb('shell','am','force-stop',GUARD)
     # Create the main app's private prefs before the service is bound.
-    xml=f'<map><boolean name="enabled" value="true"/><int name="seconds" value="30"/><set name="sources"><string>{SOURCE}</string></set></map>'
+    xml=f'<map><boolean name="enabled" value="true"/><int name="seconds" value="30"/><boolean name="background_guide_seen" value="true"/><set name="sources"><string>{SOURCE}</string></set></map>'
     with tempfile.NamedTemporaryFile(mode='w',encoding='utf8',delete=False) as f:
         f.write(xml)
         temp=f.name
@@ -109,7 +114,7 @@ def case(label,y):
 
 def main():
     setup()
-    # Coordinates on the 320x640 emulator, from the fixture's own XML layout.
+    # Coordinates on the forced 320x640/mdpi emulator, from fixture layout.
     case('clicked',365)
     case('delayed',413)
     print('Cloud cross-app return integration passed.',flush=True)
@@ -120,6 +125,8 @@ if __name__=='__main__':
         try: screenshot('failure')
         except Exception: pass
         try:
+            (OUT/'logcat.txt').write_text(adb('logcat','-d','-t','1200'),encoding='utf8')
             (OUT/'failure-accessibility.txt').write_text(adb('shell','dumpsys','accessibility'),encoding='utf8')
         except Exception: pass
         raise
+

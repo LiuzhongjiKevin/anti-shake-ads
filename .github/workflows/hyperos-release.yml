@@ -1,0 +1,93 @@
+name: HyperOS update build, test and release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/hyperos-release.yml', 'app/**', 'scripts/test-core.sh', 'scripts/emulator-headless.py', 'tests/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hyperos-release
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - run: bash scripts/test-core.sh
+      - run: chmod +x gradlew && ./gradlew --no-daemon assembleDebug :app:assembleDebugAndroidTest lintDebug
+      - name: Prepare the exact APKs to test and publish
+        run: |
+          mkdir -p tested-apks
+          cp app/build/outputs/apk/debug/app-debug.apk tested-apks/anti-shake-ads-0.2.0-test.apk
+          cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk tested-apks/
+          cp fixture-source/build/outputs/apk/debug/fixture-source-debug.apk tested-apks/fixture-source.apk
+          cp fixture-target/build/outputs/apk/debug/fixture-target-debug.apk tested-apks/fixture-target.apk
+          cd tested-apks
+          sha256sum *.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with: {name: tested-apks, path: tested-apks/}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: lint-reports, path: 'app/build/reports/lint-results-debug.*'}
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: {api: [29, 35]}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - uses: actions/download-artifact@v4
+        with: {name: tested-apks, path: downloads/}
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: default
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb shell wm size 320x640
+            adb shell wm density 160
+            python3 scripts/emulator-headless.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: 'emulator-api-${{ matrix.api }}', path: reports/emulator/}
+  release:
+    needs: [build, emulator]
+    runs-on: ubuntu-latest
+    permissions: {contents: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: tested-apks, path: tested-apks/}
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'emulator-api-*', path: evidence/}
+      - name: Publish only after both emulators pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd tested-apks
+          sha256sum -c SHA256SUMS.txt
+          cd ..
+          zip -r emulator-evidence.zip evidence
+          if gh release view v0.2.0-test >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to replace a published APK.'
+            exit 1
+          fi
+          gh release create v0.2.0-test tested-apks/anti-shake-ads-0.2.0-test.apk tested-apks/fixture-source.apk tested-apks/fixture-target.apk tested-apks/SHA256SUMS.txt emulator-evidence.zip --target "$GITHUB_SHA" --title 'v0.2.0-test · 简洁首页与澎湃 OS 引导' --notes-file docs/RELEASE-0.2.0.md --prerelease
+          gh release download v0.2.0-test --pattern anti-shake-ads-0.2.0-test.apk --dir downloaded
+          cmp tested-apks/anti-shake-ads-0.2.0-test.apk downloaded/anti-shake-ads-0.2.0-test.apk
