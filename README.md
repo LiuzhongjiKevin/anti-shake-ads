@@ -17,13 +17,13 @@
 
 ## 安装和第一次测试
 
-需要 Android 8.0 或更新系统。下载三个测试 APK：
+需要 Android 8.0 或更新系统。下载三个测试 APK（均为 debug 签名，供测试使用）：
 
 | APK | 用途 |
 | --- | --- |
-| `anti-shake-ads-0.1.0-test.apk` | 主应用，手机上显示“反摇一摇广告” |
-| `fixture-source.apk` | “跳转测试源”，模拟点击、自动和摇动跳转 |
-| `fixture-target.apk` | “模拟广告页”，无真实广告、无联网 |
+| [anti-shake-ads-0.1.0-test.apk](downloads/anti-shake-ads-0.1.0-test.apk?raw=1) | 主应用，手机上显示“反摇一摇广告” |
+| [fixture-source.apk](downloads/fixture-source.apk?raw=1) | “跳转测试源”，模拟点击、自动和摇动跳转 |
+| [fixture-target.apk](downloads/fixture-target.apk?raw=1) | “模拟广告页”，无真实广告、无联网 |
 
 1. 安装主应用，阅读应用内说明并到系统设置开启它的无障碍服务。
 2. 打开“开启跳转保护”，在“选择保护应用”中勾选“跳转测试源”。

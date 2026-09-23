@@ -1,0 +1,3 @@
+d64a20f71763adef5f22fa25a64c19cb3e2b3cb8dcc79b93d4e2616e12ab3ac9  anti-shake-ads-0.1.0-test.apk
+01d3b8efc31970d52c7c51106e7e786d179586f53fb60be7b4ce71cd7bf684fb  fixture-source.apk
+c2b7f30b857bf21bd838f58689d4db062967a26579820d405830a1dff427b645  fixture-target.apk
