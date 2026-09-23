@@ -104,7 +104,7 @@ def test_jump(label,button):
     field=next((n for n in before.iter('node') if '输入文字，返回后检查是否保留' in n.get('text','') or
                 '输入文字，返回后检查是否保留' in n.get('content-desc','')),None)
     if field is not None:
-        match=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',field['bounds'])
+        match=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',field.get('bounds',''))
         if match:
             x1,y1,x2,y2=map(int,match.groups())
             adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2))
