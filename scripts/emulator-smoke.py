@@ -66,7 +66,11 @@ def wait_node(text, timeout=40):
 
 
 def events():
-    xml=adb('shell','run-as',GUARD,'cat','shared_prefs/guard_events.xml')
+    try:
+        xml=adb('shell','run-as',GUARD,'cat','shared_prefs/guard_events.xml')
+    except subprocess.CalledProcessError as error:
+        if b'No such file or directory' in error.stderr: return []
+        raise
     root=ET.fromstring(xml)
     value=next((n.text for n in root.iter('string') if n.get('name')=='events'),'[]')
     return json.loads(value)
