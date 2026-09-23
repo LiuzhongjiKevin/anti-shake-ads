@@ -30,10 +30,19 @@ def screen(name):
 
 
 def hierarchy():
-    adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
-    raw = adb('shell', 'cat', '/sdcard/guard-window.xml')
-    (OUT / 'last-window.xml').write_text(raw, encoding='utf-8')
-    return ET.fromstring(raw)
+    last_error=None
+    for attempt in range(6):
+        try:
+            output=adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
+            if 'dumped to' not in output: raise RuntimeError('UI dump unavailable: '+output.strip())
+            raw=adb('shell', 'cat', '/sdcard/guard-window.xml')
+            (OUT / 'last-window.xml').write_text(raw, encoding='utf-8')
+            return ET.fromstring(raw)
+        except (subprocess.CalledProcessError, ET.ParseError, RuntimeError) as error:
+            last_error=error
+            print('Retrying emulator hierarchy',attempt+1,repr(error),flush=True)
+            time.sleep(1)
+    raise RuntimeError('UI hierarchy unavailable') from last_error
 
 
 def node_with(text):
