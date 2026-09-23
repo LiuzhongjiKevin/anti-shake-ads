@@ -46,7 +46,7 @@ def node_with(text):
 def tap_node(text, *, attempts=4):
     for n in range(attempts):
         node = node_with(text)
-        if node:
+        if node is not None:
             match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
             if match:
                 x1,y1,x2,y2 = map(int, match.groups())
@@ -60,7 +60,7 @@ def wait_node(text, timeout=40):
     end = time.monotonic()+timeout
     while time.monotonic()<end:
         node=node_with(text)
-        if node: return node
+        if node is not None: return node
         time.sleep(0.5)
     raise AssertionError(f'UI did not show: {text!r}')
 
