@@ -4,25 +4,26 @@ on:
     branches: [main]
     paths: ['.github/workflows/publish-preview.yml']
   workflow_dispatch:
-permissions: {contents: write, actions: read}
+permissions: {contents: read, actions: read}
 jobs:
   preview:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: {ref: main}
-      - name: Save the actual API 29 emulator screenshot
+      - name: Inspect test evidence
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download 35870102542 --name emulator-api-29 --dir preview
-          python3 -c "import base64,pathlib; print('PREVIEW_PNG='+base64.b64encode(pathlib.Path('preview/service-ready.png').read_bytes()).decode())"
-          mkdir -p docs/screenshots
-          cp preview/service-ready.png docs/screenshots/v0.2.0-api29.png
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/screenshots/v0.2.0-api29.png
-          if ! git diff --cached --quiet; then
-            git commit -m 'docs: add actual v0.2.0 emulator home screenshot'
-            git push origin HEAD:main
-          fi
+          gh run download 35870898834 --pattern 'emulator-api-*' --dir preview
+          python3 - <<'PY'
+          import pathlib,base64
+          for name in ['emulator-api-29/delayed-before.png','emulator-api-35/clicked-before.png','emulator-api-35/failure.png']:
+              p=pathlib.Path('preview')/name
+              if p.exists():print('IMAGE '+name+' '+base64.b64encode(p.read_bytes()).decode())
+          for name in ['emulator-api-35/failure-accessibility.txt','emulator-api-35/logcat.txt']:
+              p=pathlib.Path('preview')/name
+              if p.exists():
+                  print('EVIDENCE '+name)
+                  for l in p.read_text().splitlines():
+                      if 'accessibility' in name or any(s in l for s in ['cn.returnguard','AccessibilityManager','FATAL EXCEPTION']):print(l)
+          PY
