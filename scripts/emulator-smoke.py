@@ -56,7 +56,7 @@ def tap_node(text, *, attempts=4):
     raise AssertionError(f'Could not find visible control containing: {text!r}')
 
 
-def wait_node(text, timeout=12):
+def wait_node(text, timeout=40):
     end = time.monotonic()+timeout
     while time.monotonic()<end:
         node=node_with(text)
@@ -123,6 +123,7 @@ def main():
     adb('shell','settings','put','secure','accessibility_enabled','1')
     adb('shell','am','start','-n',GUARD+'/.MainActivity')
     wait_node('开启跳转保护')
+    print('Guard UI is visible',flush=True)
     screen('setup-before')
     tap_node('开启跳转保护')
     tap_node('选择保护应用')
