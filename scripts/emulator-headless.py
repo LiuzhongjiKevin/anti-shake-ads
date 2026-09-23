@@ -69,7 +69,7 @@ def setup():
     adb('shell','am','start','-n',GUARD+'/.MainActivity')
     for _ in range(30):
         state=adb('shell','dumpsys','accessibility')
-        if 'Bound services:' in state and 'GuardService' in state.split('Bound services:',1)[1].split('Enabled services:',1)[0]:
+        if 'Bound services:{Service[' in state and 'Enabled services:{{'+GUARD+'/' in state:
             print('AccessibilityService bound',flush=True)
             screenshot('service-ready')
             return
