@@ -64,7 +64,7 @@ def setup():
     screenshot('home-enabled')
     adb('shell','am','force-stop',GUARD)
     # Create the main app's private prefs before the service is bound.
-    xml=f'<map><boolean name="enabled" value="true"/><int name="seconds" value="30"/><boolean name="background_guide_seen" value="true"/><set name="sources"><string>{SOURCE}</string></set></map>'
+    xml=f'<map><boolean name="enabled" value="true"/><int name="seconds" value="30"/><boolean name="background_guide_seen" value="true"/><boolean name="diagnostic_trace" value="true"/><set name="sources"><string>{SOURCE}</string></set></map>'
     with tempfile.NamedTemporaryFile(mode='w',encoding='utf8',delete=False) as f:
         f.write(xml)
         temp=f.name
@@ -139,7 +139,9 @@ if __name__=='__main__':
         try: screenshot('failure')
         except Exception: pass
         try:
-            (OUT/'logcat.txt').write_text(adb('logcat','-d','-t','1200'),encoding='utf8')
+            full_log=adb('logcat','-d','-t','2000')
+            (OUT/'logcat.txt').write_text(full_log,encoding='utf8')
+            print('\n'.join(l for l in full_log.splitlines() if 'ReturnGuardTrace' in l),flush=True)
             (OUT/'failure-accessibility.txt').write_text(adb('shell','dumpsys','accessibility'),encoding='utf8')
         except Exception: pass
         raise

@@ -22,17 +22,19 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
    PowerManager pm=(PowerManager)service.getSystemService(Context.POWER_SERVICE);if(pm!=null&&!pm.isInteractive())return null;
    String active=null;
    for(AccessibilityWindowInfo w:service.getWindows()){
+    trace("window type="+w.getType()+" active="+w.isActive()+" focused="+w.isFocused());
     if(w.isFocused()&&w.getType()!=AccessibilityWindowInfo.TYPE_APPLICATION)return null;
     if(!w.isActive()||!w.isFocused()||w.getType()!=AccessibilityWindowInfo.TYPE_APPLICATION)continue;
     if(w.isInPictureInPictureMode())return null;
-    AccessibilityNodeInfo root=w.getRoot();if(root==null)return null;CharSequence name=root.getPackageName();String p=name==null?null:name.toString();root.recycle();
+    AccessibilityNodeInfo root=w.getRoot();if(root==null){trace("null root");return null;}CharSequence name=root.getPackageName();String p=name==null?null:name.toString();root.recycle();
     if(p==null||(active!=null&&!active.equals(p)))return null;active=p;
    }return active;
   }catch(RuntimeException e){return null;}
  }
- private void sample(){queued=false;if(closed)return;if(!prefs.active()){cancel();return;}String p=activePackage();handle(engine.update(p,p!=null&&excluded.contains(p),p!=null&&prefs.sources().contains(p),prefs.allowed(engine.source(),p),SystemClock.elapsedRealtime()));if(engine.recovering())queue(100);}
+ private void trace(String line){if(prefs.data.getBoolean("diagnostic_trace",false))android.util.Log.d("ReturnGuardTrace",line);}
+ private void sample(){queued=false;if(closed)return;if(!prefs.active()){cancel();return;}String p=activePackage();trace("sample pkg="+p+" enabled="+prefs.active()+" source="+engine.source()+" selected="+prefs.sources()+" excluded="+excluded.contains(p));handle(engine.update(p,p!=null&&excluded.contains(p),p!=null&&prefs.sources().contains(p),prefs.allowed(engine.source(),p),SystemClock.elapsedRealtime()));if(engine.recovering())queue(100);}
  private void handle(GuardEngine.Action a){
-  if(a==GuardEngine.Action.NONE)return;long now=SystemClock.elapsedRealtime();
+  trace("action="+a);if(a==GuardEngine.Action.NONE)return;long now=SystemClock.elapsedRealtime();
   if(a==GuardEngine.Action.BACK||a==GuardEngine.Action.RELAUNCH){
    if(pendingSource==null){pendingSource=engine.source();pendingTarget=engine.target();pendingAt=now;}pendingAttempts=engine.attempts();
    String current=activePackage();if(!prefs.active()||current==null||excluded.contains(current)){cancel();return;}

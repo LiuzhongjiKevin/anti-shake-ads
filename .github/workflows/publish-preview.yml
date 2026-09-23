@@ -14,10 +14,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download 35870898834 --pattern 'emulator-api-*' --dir preview
+          gh run download 35872129908 --pattern 'emulator-api-*' --dir preview
           python3 - <<'PY'
           import pathlib,base64
-          for name in ['emulator-api-29/delayed-before.png','emulator-api-35/clicked-before.png','emulator-api-35/failure.png']:
+          for name in ['emulator-api-29/service-ready.png','emulator-api-35/clicked-before.png','emulator-api-35/failure.png']:
               p=pathlib.Path('preview')/name
               if p.exists():print('IMAGE '+name+' '+base64.b64encode(p.read_bytes()).decode())
           for name in ['emulator-api-35/failure-accessibility.txt','emulator-api-35/logcat.txt']:
@@ -27,3 +27,4 @@ jobs:
                   for l in p.read_text().splitlines():
                       if 'accessibility' in name or any(s in l for s in ['cn.returnguard','AccessibilityManager','FATAL EXCEPTION']):print(l)
           PY
+
