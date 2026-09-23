@@ -50,6 +50,8 @@ def foreground():
 def setup():
     for file in ['anti-shake-ads-0.1.0-test.apk','fixture-source.apk','fixture-target.apk']:
         adb('install','-r',str(Path('downloads')/file),timeout=120)
+    adb('shell','am','start','-n',GUARD+'/.MainActivity')
+    adb('shell','am','force-stop',GUARD)
     # Create the main app's private prefs before the service is bound.
     xml=f'<map><boolean name="enabled" value="true"/><int name="seconds" value="30"/><set name="sources"><string>{SOURCE}</string></set></map>'
     with tempfile.NamedTemporaryFile(mode='w',encoding='utf8',delete=False) as f:
@@ -72,6 +74,7 @@ def setup():
             return
         time.sleep(1)
     (OUT/'accessibility.txt').write_text(state,encoding='utf8')
+    print('Accessibility manager failed state:', state[:3500],flush=True)
     raise AssertionError('AccessibilityService did not bind')
 
 def case(label,y):
