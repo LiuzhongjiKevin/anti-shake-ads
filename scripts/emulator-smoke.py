@@ -33,13 +33,15 @@ def hierarchy():
     last_error=None
     for attempt in range(6):
         try:
-            adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
+            output=adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
+            if attempt==0: print('UI dumper:', repr(output[:300]), flush=True)
             raw=adb('shell', 'cat', '/sdcard/guard-window.xml')
             (OUT / 'last-window.xml').write_text(raw, encoding='utf-8')
             return ET.fromstring(raw)
         except (subprocess.CalledProcessError, ET.ParseError, RuntimeError) as error:
             last_error=error
-            print('Retrying emulator hierarchy',attempt+1,repr(error),flush=True)
+            print('Retrying emulator hierarchy',attempt+1,repr(error),
+                  getattr(error,'stderr',b'')[:350],flush=True)
             time.sleep(1)
     raise RuntimeError('UI hierarchy unavailable') from last_error
 
