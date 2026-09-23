@@ -139,6 +139,8 @@ def main():
     # Test-only emulator configuration; a normal user enables the service in Settings.
     adb('shell','settings','put','secure','enabled_accessibility_services',GUARD+'/.GuardService')
     adb('shell','settings','put','secure','accessibility_enabled','1')
+    print('Enabled service setting:',adb('shell','settings','get','secure','enabled_accessibility_services'),flush=True)
+    print('Accessibility manager:',adb('shell','dumpsys','accessibility')[:6500],flush=True)
     adb('shell','am','start','-n',GUARD+'/.MainActivity')
     wait_node('开启跳转保护')
     print('Guard UI is visible',flush=True)
