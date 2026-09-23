@@ -61,7 +61,12 @@ def tap_node(text, *, attempts=4):
                 x1,y1,x2,y2 = map(int, match.groups())
                 adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
                 return
-        adb('shell', 'input', 'swipe', '500', '1200', '500', '350', '300')
+        size=adb('shell','wm','size')
+        dimensions=re.search(r'(\d+)x(\d+)',size)
+        assert dimensions, f'Unknown emulator size: {size}'
+        width,height=map(int,dimensions.groups())
+        adb('shell', 'input', 'swipe', str(width//2), str(height*3//4),
+            str(width//2), str(height//3), '300')
     raise AssertionError(f'Could not find visible control containing: {text!r}')
 
 
