@@ -36,9 +36,13 @@ public final class UiSmoke extends Instrumentation {
   getTargetContext().startService(new Intent(getTargetContext(),ProtectionNotificationService.class).setAction(ProtectionNotificationService.STOP));waitFor(()->!ProtectionNotificationService.running(),"notification stop removes foreground service");check(!prefs.enabled(),"stop persists disabled preference");
   getTargetContext().startForegroundService(new Intent(getTargetContext(),ProtectionNotificationService.class));idle();check(!ProtectionNotificationService.running()&&!prefs.enabled(),"stale restart cannot override user stop");
   tap();waitFor(ProtectionNotificationService::running,"main button re-enables protection");
-  if(Build.VERSION.SDK_INT>=33){shell("pm revoke cn.returnguard android.permission.POST_NOTIFICATIONS");idle();check(!BackgroundSettings.notifications(getTargetContext())&&ProtectionNotificationService.running(),"denied notification permission does not masquerade as visible notification");shell("pm grant cn.returnguard android.permission.POST_NOTIFICATIONS");}
+  if(Build.VERSION.SDK_INT>=33){shell("appops set cn.returnguard POST_NOTIFICATION ignore");idle();check(!BackgroundSettings.notifications(getTargetContext())&&ProtectionNotificationService.running(),"denied notification permission does not masquerade as visible notification");shell("appops set cn.returnguard POST_NOTIFICATION allow");}
   shell("settings put secure enabled_accessibility_services null");shell("settings put secure accessibility_enabled 0");waitFor(()->!GuardService.running(),"accessibility disconnect detected");idle();check(notification().equals("需要开启无障碍"),"disconnected service is not reported as protected");
-  shell("settings put secure enabled_accessibility_services cn.returnguard/.GuardService");shell("settings put secure accessibility_enabled 1");waitFor(GuardService::running,"accessibility can reconnect");
+  runOnMainSync(()->prefs.data.edit().putBoolean("setup_requested",true).apply());
+  getTargetContext().startService(new Intent(getTargetContext(),ProtectionNotificationService.class).setAction(ProtectionNotificationService.STOP));waitFor(()->!ProtectionNotificationService.running(),"stop works during accessibility repair");
+  check(!prefs.data.getBoolean("setup_requested",false),"stop clears pending permission repair");
+  shell("settings put secure enabled_accessibility_services cn.returnguard/.GuardService");shell("settings put secure accessibility_enabled 1");waitFor(GuardService::running,"accessibility can reconnect");SystemClock.sleep(1500);
+  check(!prefs.enabled()&&!ProtectionNotificationService.running(),"permission reconnect cannot undo explicit stop");tap();waitFor(ProtectionNotificationService::running,"explicit enable after repair works");
   runOnMainSync(()->prefs.data.edit().putInt("seconds",30).apply());idle();
   result.putString("stream",evidence+"UI_LIFECYCLE_PASSED\n");finish(Activity.RESULT_OK,result);
  }catch(Throwable e){result.putString("stream",evidence+"UI_LIFECYCLE_FAILED: "+android.util.Log.getStackTraceString(e));finish(Activity.RESULT_CANCELED,result);}}

@@ -7,6 +7,7 @@ final class Prefs {
  final SharedPreferences data;private final Context context;
  Prefs(Context c){context=c;data=c.getSharedPreferences("guard_settings",Context.MODE_PRIVATE);}
  boolean enabled(){return data.getBoolean("enabled",false);}
+ void stop(){data.edit().putBoolean("enabled",false).putBoolean("setup_requested",false).apply();resume();}
  boolean active(){return enabled()&&!paused();}
  private int boot(){return Settings.Global.getInt(context.getContentResolver(),Settings.Global.BOOT_COUNT,-1);}
  boolean paused(){long now=SystemClock.elapsedRealtime();return boot()==data.getInt("pauseBoot",-2)&&now>=data.getLong("pauseStart",0)&&now<data.getLong("pauseUntil",0);}

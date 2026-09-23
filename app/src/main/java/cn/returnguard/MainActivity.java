@@ -16,10 +16,10 @@ import cn.returnguard.core.ProtectionState;
 public final class MainActivity extends Activity {
  private static final int BG=0xfff5f6f2,CARD=0xffffffff,TEXT=0xff17332c,MUTED=0xff586b62,ACCENT=0xff174b40;
  private Prefs prefs;private LinearLayout body;private TextView status,count,detail,backgroundHint;private Button power;
- private boolean pendingActivation;
+ private boolean setupPending(){return prefs.data.getBoolean("setup_requested",false);}
  private final Handler handler=new Handler(Looper.getMainLooper());
- private final Runnable ticker=new Runnable(){public void run(){if(pendingActivation&&GuardService.running()&&!prefs.sources().isEmpty())activate();update();handler.postDelayed(this,1000);}};
- @Override public void onCreate(Bundle b){super.onCreate(b);prefs=new Prefs(this);pendingActivation=prefs.data.getBoolean("setup_requested",false);}
+ private final Runnable ticker=new Runnable(){public void run(){if(setupPending()&&GuardService.running()&&!prefs.sources().isEmpty())activate();update();handler.postDelayed(this,1000);}};
+ @Override public void onCreate(Bundle b){super.onCreate(b);prefs=new Prefs(this);}
  @Override public void onResume(){super.onResume();render();if(prefs.enabled()&&GuardService.running())ProtectionNotificationService.start(this);handler.post(ticker);}
  @Override public void onPause(){handler.removeCallbacks(ticker);super.onPause();}
  private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -46,7 +46,7 @@ public final class MainActivity extends Activity {
  }
  private void update(){if(status==null)return;
   ProtectionState s=ProtectionStatus.state(prefs);status.setText(ProtectionStatus.title(prefs));detail.setText(ProtectionStatus.detail(prefs));
-  String action=s==ProtectionState.READY?"关闭保护":s==ProtectionState.PAUSED?"恢复保护":pendingActivation||prefs.enabled()?"继续设置":"开启保护";
+  String action=s==ProtectionState.READY?"关闭保护":s==ProtectionState.PAUSED?"恢复保护":setupPending()||prefs.enabled()?"继续设置":"开启保护";
   power.setText("↶\n"+action);power.setContentDescription(action);count.setText(prefs.sources().isEmpty()?"选择要保护的应用":"已保护 "+prefs.sources().size()+" 个应用  ·  点此管理");
   if(!prefs.enabled())backgroundHint.setText(BackgroundSettings.xiaomi()?"澎湃 OS 后台设置":"后台运行设置");
   else if(!ProtectionNotificationService.running())backgroundHint.setText("常驻状态未启动 · 点此检查");
@@ -55,11 +55,12 @@ public final class MainActivity extends Activity {
  }
  private void primaryAction(){
   ProtectionState s=ProtectionStatus.state(prefs);
-  if(s==ProtectionState.READY){cancelSetup();prefs.data.edit().putBoolean("enabled",false).apply();prefs.resume();ProtectionNotificationService.stop(this);update();return;}
+  if(s==ProtectionState.READY){disableProtection();return;}
   if(s==ProtectionState.PAUSED){prefs.resume();ProtectionNotificationService.start(this);update();return;}
-  pendingActivation=true;prefs.data.edit().putBoolean("setup_requested",true).apply();continueSetup();
+  prefs.data.edit().putBoolean("setup_requested",true).apply();continueSetup();
  }
- private void cancelSetup(){pendingActivation=false;prefs.data.edit().putBoolean("setup_requested",false).apply();update();}
+ private void disableProtection(){prefs.stop();ProtectionNotificationService.stop(this);update();}
+ private void cancelSetup(){prefs.data.edit().putBoolean("setup_requested",false).apply();update();}
  private void continueSetup(){if(prefs.sources().isEmpty()){pickApps(false,null);return;}if(!GuardService.running()){disclose();return;}activate();}
  private void activate(){cancelSetup();prefs.resume();prefs.data.edit().putBoolean("enabled",true).apply();boolean started=ProtectionNotificationService.start(this);update();if(!started)message("系统暂未允许启动常驻状态。请检查后台设置后，重新打开本应用。");else if(!prefs.data.getBoolean("background_guide_seen",false)){prefs.data.edit().putBoolean("background_guide_seen",true).apply();background();}}
  private void disclose(){new AlertDialog.Builder(this).setTitle("开启无障碍，才能帮你返回").setMessage(getString(R.string.accessibility_description)+"\n\n接下来请在系统的已下载应用/已安装服务中，打开“反摇一摇广告 · 跳转保护”。完成后返回本应用，将自动继续。\n\n如果开关不可用：在应用信息右上角菜单中检查“允许受限设置”。设备可能要求额外验证；必须由你本人确认。").setNegativeButton("稍后",(d,w)->cancelSetup()).setOnCancelListener(d->cancelSetup()).setPositiveButton("去开启",(d,w)->BackgroundSettings.accessibility(this)).show();}
@@ -80,8 +81,8 @@ public final class MainActivity extends Activity {
   new AlertDialog.Builder(this).setTitle("后台运行设置").setView(scroll).setPositiveButton("完成，返回主页",(d,w)->update()).show();
  }
  private void options(){
-  String[] items={"后台运行设置","保护规则与允许跳转","暂停一分钟 / 恢复","最近返回记录","测试与使用说明","开源与隐私"};
-  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内部的广告页暂不自动处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.0 测试版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名和类型并执行返回；记录最多 100 条。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
+  String[] items={"后台运行设置","保护规则与允许跳转","暂停一分钟 / 恢复","最近返回记录","测试与使用说明","开源与隐私","关闭保护"};
+  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 6:disableProtection();break;case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内部的广告页暂不自动处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.0 测试版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名和类型并执行返回；记录最多 100 条。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
  }
  private void policy(){
   LinearLayout l=column();l.addView(text("进入所选应用后的保护时长",16,TEXT));RadioGroup group=new RadioGroup(this);group.setOrientation(LinearLayout.HORIZONTAL);
@@ -105,7 +106,7 @@ public final class MainActivity extends Activity {
     LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(dp(16),dp(8),dp(16),0);EditText search=new EditText(this);search.setSingleLine(true);search.setHint("搜索应用名称或包名");layout.addView(search);ListView list=new ListView(this);layout.addView(list,new LinearLayout.LayoutParams(-1,dp(360)));List<AppCatalog.Entry> filtered=new ArrayList<>();
     Runnable filter=()->{String q=search.getText().toString().toLowerCase(Locale.ROOT);filtered.clear();List<String> labels=new ArrayList<>();for(AppCatalog.Entry e:apps)if(!e.pkg.equals(source)&&(e.label+e.pkg).toLowerCase(Locale.ROOT).contains(q)){filtered.add(e);labels.add((selected.contains(e.pkg)?"✓  ":"○  ")+e.display());}list.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,labels));};
     list.setOnItemClickListener((p,v,pos,id)->{String pkg=filtered.get(pos).pkg;if(!selected.add(pkg))selected.remove(pkg);filter.run();});search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int b,int c){filter.run();}public void afterTextChanged(android.text.Editable e){}});filter.run();
-    new AlertDialog.Builder(this).setTitle(allow?"允许目标 · "+AppCatalog.label(this,source):"选择保护应用").setView(layout).setNegativeButton("取消",(d,w)->cancelSetup()).setOnCancelListener(d->cancelSetup()).setPositiveButton("保存",(d,w)->{if(allow)prefs.saveAllowed(source,selected);else prefs.saveSources(selected);update();if(!allow&&pendingActivation)continueSetup();}).show();
+    new AlertDialog.Builder(this).setTitle(allow?"允许目标 · "+AppCatalog.label(this,source):"选择保护应用").setView(layout).setNegativeButton("取消",(d,w)->cancelSetup()).setOnCancelListener(d->cancelSetup()).setPositiveButton("保存",(d,w)->{if(allow)prefs.saveAllowed(source,selected);else prefs.saveSources(selected);update();if(!allow&&setupPending())continueSetup();}).show();
    });
   },"app-catalog").start();
  }

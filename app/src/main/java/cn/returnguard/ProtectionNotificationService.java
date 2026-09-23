@@ -29,7 +29,7 @@ public final class ProtectionNotificationService extends Service implements Shar
  @Override public int onStartCommand(Intent i,int flags,int id){
   // Promote immediately even if a stale pending action arrives after the user stopped.
   show();
-  if(i!=null&&STOP.equals(i.getAction())){prefs.data.edit().putBoolean("enabled",false).apply();prefs.resume();}
+  if(i!=null&&STOP.equals(i.getAction())){prefs.stop();}
   if(!prefs.enabled()){stopForeground(STOP_FOREGROUND_REMOVE);foreground=false;stopSelf();return START_NOT_STICKY;}
   if(i!=null&&PAUSE.equals(i.getAction())){if(prefs.paused())prefs.resume();else prefs.pause();}
   refresh();return START_STICKY;
