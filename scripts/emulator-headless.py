@@ -75,14 +75,15 @@ def setup():
         adb('shell','run-as',GUARD,'cp','/data/local/tmp/guard-settings.xml','shared_prefs/guard_settings.xml')
     finally:
         Path(temp).unlink(missing_ok=True)
-    adb('shell','am','start','-n',GUARD+'/.MainActivity')
+    adb('shell','am','start','-W','-n',GUARD+'/.MainActivity')
     adb('shell','settings','put','secure','enabled_accessibility_services',GUARD+'/.GuardService')
     adb('shell','settings','put','secure','accessibility_enabled','1')
-    adb('shell','am','start','-n',GUARD+'/.MainActivity')
+    adb('shell','am','start','-W','-n',GUARD+'/.MainActivity')
     for _ in range(30):
         state=adb('shell','dumpsys','accessibility')
         if 'Bound services:{Service[' in state and 'Enabled services:{{'+GUARD+'/' in state:
             print('AccessibilityService bound',flush=True)
+            time.sleep(1)  # Bound state precedes the first rendered Activity frame.
             screenshot('service-ready')
             return
         time.sleep(1)
@@ -92,11 +93,18 @@ def setup():
 
 def case(label,y):
     adb('shell','input','keyevent','KEYCODE_HOME')
-    adb('shell','am','start','-n',SOURCE+'/.MainActivity')
+    end=time.monotonic()+8
+    while foreground() in (SOURCE,TARGET,GUARD,None):
+        if time.monotonic()>end: raise AssertionError('Launcher did not become focused')
+        time.sleep(.2)
+    time.sleep(.5)
+    adb('shell','am','start','-W','-n',SOURCE+'/.MainActivity')
     end=time.monotonic()+12
     while foreground()!=SOURCE:
         if time.monotonic()>end: raise AssertionError('Source did not open')
         time.sleep(.2)
+    time.sleep(.8)  # Let focus/window events settle before the ad trigger.
+    (OUT/(label+'-before-windows.txt')).write_text(adb('shell','dumpsys','window'),encoding='utf8')
     before=activity_record()
     old=len(events())
     screenshot(label+'-before')
