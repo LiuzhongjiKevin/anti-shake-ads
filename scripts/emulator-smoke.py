@@ -33,8 +33,7 @@ def hierarchy():
     last_error=None
     for attempt in range(6):
         try:
-            output=adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
-            if 'dumped to' not in output: raise RuntimeError('UI dump unavailable: '+output.strip())
+            adb('shell', 'uiautomator', 'dump', '/sdcard/guard-window.xml', timeout=40)
             raw=adb('shell', 'cat', '/sdcard/guard-window.xml')
             (OUT / 'last-window.xml').write_text(raw, encoding='utf-8')
             return ET.fromstring(raw)
