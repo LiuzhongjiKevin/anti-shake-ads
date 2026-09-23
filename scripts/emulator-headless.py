@@ -64,6 +64,7 @@ def setup():
         adb('shell','run-as',GUARD,'cp','/data/local/tmp/guard-settings.xml','shared_prefs/guard_settings.xml')
     finally:
         Path(temp).unlink(missing_ok=True)
+    adb('shell','am','start','-n',GUARD+'/.MainActivity')
     adb('shell','settings','put','secure','enabled_accessibility_services',GUARD+'/.GuardService')
     adb('shell','settings','put','secure','accessibility_enabled','1')
     adb('shell','am','start','-n',GUARD+'/.MainActivity')
