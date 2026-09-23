@@ -1,0 +1,1 @@
+<resources><string name="app_name">反摇一摇广告</string><string name="accessibility_description">在你选择的应用保护时段内，检测跨应用跳转并尝试系统返回。读取当前窗口的包名和类型，不读取或保存输入文字、网页正文或截图，不联网。系统会显示广泛的无障碍授权提示；本应用只使用上述能力。可能影响正常登录、支付和分享，可随时暂停。返回原应用不保证原页面保留。</string></resources>

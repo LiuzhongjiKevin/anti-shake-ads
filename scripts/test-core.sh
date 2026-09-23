@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -eu
+cd "$(dirname "$0")/.."
+mkdir -p build/core-tests
+"${JAVA_HOME:+$JAVA_HOME/bin/}javac" -encoding UTF-8 -d build/core-tests app/src/main/java/cn/returnguard/core/*.java tests/cn/returnguard/core/*.java
+"${JAVA_HOME:+$JAVA_HOME/bin/}java" -ea -cp build/core-tests cn.returnguard.core.GuardEngineTest
