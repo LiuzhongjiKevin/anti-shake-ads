@@ -155,6 +155,8 @@ def main():
     tap_node('保存')
     wait_node('已选 1 个应用')
     tap_node('30秒')
+    print('Accessibility state:', '\n'.join(v for v in adb('shell','dumpsys','accessibility').splitlines() if 'cn.returnguard' in v)[:2500],flush=True)
+    wait_node('保护已就绪', timeout=20)
     screen('setup-ready')
     test_jump('clicked','模拟误点：打开广告页')
     test_jump('delayed','模拟无点击跳转：1 秒后打开')
@@ -166,6 +168,7 @@ if __name__=='__main__':
     except Exception:
         for name, command in [('window', ('shell','cat','/sdcard/guard-window.xml')),
                               ('activity', ('shell','dumpsys','activity','activities')),
+                              ('accessibility', ('shell','dumpsys','accessibility')),
                               ('logcat', ('logcat','-d','-t','500'))]:
             try:
                 data=adb(*command, timeout=30)
