@@ -1,8 +1,8 @@
-name: HyperOS update build, test and release
+name: Android development build and checks
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/hyperos-release.yml', 'app/**', 'scripts/test-core.sh', 'scripts/emulator-headless.py', 'tests/**']
+    paths: ['app/**', 'scripts/test-core.sh', 'scripts/emulator-headless.py', 'tests/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -66,28 +66,3 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: 'emulator-api-${{ matrix.api }}', path: reports/emulator/}
-  release:
-    needs: [build, emulator]
-    runs-on: ubuntu-latest
-    permissions: {contents: write}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with: {name: tested-apks, path: tested-apks/}
-      - uses: actions/download-artifact@v4
-        with: {pattern: 'emulator-api-*', path: evidence/}
-      - name: Publish only after both emulators pass
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd tested-apks
-          sha256sum -c SHA256SUMS.txt
-          cd ..
-          zip -r emulator-evidence.zip evidence
-          if gh release view v0.2.1-test >/dev/null 2>&1; then
-            echo 'Release already exists; refusing to replace a published APK.'
-            exit 1
-          fi
-          gh release create v0.2.1-test tested-apks/anti-shake-ads-0.2.1-test.apk tested-apks/fixture-source.apk tested-apks/fixture-target.apk tested-apks/SHA256SUMS.txt emulator-evidence.zip --target "$GITHUB_SHA" --title 'v0.2.1-test · 保护应用一键全选' --notes-file docs/RELEASE-0.2.1.md --prerelease
-          gh release download v0.2.1-test --pattern anti-shake-ads-0.2.1-test.apk --dir downloaded
-          cmp tested-apks/anti-shake-ads-0.2.1-test.apk downloaded/anti-shake-ads-0.2.1-test.apk

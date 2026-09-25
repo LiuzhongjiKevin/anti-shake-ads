@@ -1,5 +1,7 @@
 # Anti-Shake Ads · 反摇一摇广告
 
+> **开发中，当前没有可发布版本。** 小米真机发现同应用内广告网页不处理，以及跨应用返回重试过早/日志计数不准确的问题，尚未解决。此前发行版已撤回；模拟器通过不能代替真机验证。任何新发行版（包括测试版、预发布和草稿）必须先取得仓库所有者当次明确同意。
+
 一个无需 root 的 Android **跨应用跳转后返回**实验应用。摇一摇广告或误点广告把你带到别的应用时，在保护时间窗内尝试回到来源应用。
 
 > 当前是测试版。它不拦截传感器、不阻止跳转发生、不保证广告页面完全不闪现，也不保证所有应用都能恢复到原页面。它按用户选择的来源和时间窗工作，不是能够自动识别所有广告的分类器。
@@ -33,13 +35,13 @@
 
 ## 安装和第一次测试
 
-需要 Android 8.0 或更新系统。日常使用只安装主应用；模拟测试时再安装两个辅助 APK（均为 debug 签名，供测试使用）：
+需要 Android 8.0 或更新系统。当前不提供发行版安装包；以下步骤仅用于从源码构建后的开发验证：
 
 | APK | 用途 |
 | --- | --- |
-| [直接下载主应用 APK](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.1-test/anti-shake-ads-0.2.1-test.apk) | 主应用，手机上显示“反摇一摇广告” |
-| [fixture-source.apk](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/fixture-source.apk) | “跳转测试源”，模拟点击、自动和摇动跳转 |
-| [fixture-target.apk](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/fixture-target.apk) | “模拟广告页”，无真实广告、无联网 |
+| 主应用（发行版已撤回） | 主应用，手机上显示“反摇一摇广告” |
+| fixture-source（从源码构建） | “跳转测试源”，模拟点击、自动和摇动跳转 |
+| fixture-target（从源码构建） | “模拟广告页”，无真实广告、无联网 |
 
 1. 安装主应用，点击首页“开启保护”，选择“跳转测试源”。
 2. 按引导开启无障碍并返回应用，在后台设置中允许通知。小米手机还建议允许自启动、省电设为无限制，并锁定最近任务。
@@ -79,7 +81,7 @@
 
 这里的耗时从首次返回动作计起，不包括跳转前的等待、目标启动动画或整个广告曝光时长。输入内容、滚动位置、真实摇动、高德真实广告以及澎湃 OS/EMUI 真机仍未验证。
 
-[发行版中的测试日志与截图](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/emulator-evidence.zip)。历史 0.1.0 结果见 [验证记录](docs/VALIDATION.md)。
+历史测试日志可在上方 Actions 流水线查看（发行版附件已撤回）。历史 0.1.0 结果见 [验证记录](docs/VALIDATION.md)。
 
 ## 正常登录、支付被返回怎么办？
 
