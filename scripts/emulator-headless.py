@@ -48,7 +48,7 @@ def foreground():
     return match.group(1) if match else None
 
 def setup():
-    for file in ['anti-shake-ads-0.2.0-test.apk','fixture-source.apk','fixture-target.apk']:
+    for file in ['anti-shake-ads-0.2.1-test.apk','fixture-source.apk','fixture-target.apk']:
         adb('install','-r',str(Path('downloads')/file),timeout=120)
     adb('install','-r','downloads/app-debug-androidTest.apk',timeout=120)
     if int(adb('shell','getprop','ro.build.version.sdk').strip())>=33:

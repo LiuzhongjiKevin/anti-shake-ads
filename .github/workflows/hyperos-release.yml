@@ -23,7 +23,7 @@ jobs:
       - name: Prepare the exact APKs to test and publish
         run: |
           mkdir -p tested-apks
-          cp app/build/outputs/apk/debug/app-debug.apk tested-apks/anti-shake-ads-0.2.0-test.apk
+          cp app/build/outputs/apk/debug/app-debug.apk tested-apks/anti-shake-ads-0.2.1-test.apk
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk tested-apks/
           cp fixture-source/build/outputs/apk/debug/fixture-source-debug.apk tested-apks/fixture-source.apk
           cp fixture-target/build/outputs/apk/debug/fixture-target-debug.apk tested-apks/fixture-target.apk
@@ -84,10 +84,10 @@ jobs:
           sha256sum -c SHA256SUMS.txt
           cd ..
           zip -r emulator-evidence.zip evidence
-          if gh release view v0.2.0-test >/dev/null 2>&1; then
+          if gh release view v0.2.1-test >/dev/null 2>&1; then
             echo 'Release already exists; refusing to replace a published APK.'
             exit 1
           fi
-          gh release create v0.2.0-test tested-apks/anti-shake-ads-0.2.0-test.apk tested-apks/fixture-source.apk tested-apks/fixture-target.apk tested-apks/SHA256SUMS.txt emulator-evidence.zip --target "$GITHUB_SHA" --title 'v0.2.0-test · 简洁首页与澎湃 OS 引导' --notes-file docs/RELEASE-0.2.0.md --prerelease
-          gh release download v0.2.0-test --pattern anti-shake-ads-0.2.0-test.apk --dir downloaded
-          cmp tested-apks/anti-shake-ads-0.2.0-test.apk downloaded/anti-shake-ads-0.2.0-test.apk
+          gh release create v0.2.1-test tested-apks/anti-shake-ads-0.2.1-test.apk tested-apks/fixture-source.apk tested-apks/fixture-target.apk tested-apks/SHA256SUMS.txt emulator-evidence.zip --target "$GITHUB_SHA" --title 'v0.2.1-test · 保护应用一键全选' --notes-file docs/RELEASE-0.2.1.md --prerelease
+          gh release download v0.2.1-test --pattern anti-shake-ads-0.2.1-test.apk --dir downloaded
+          cmp tested-apks/anti-shake-ads-0.2.1-test.apk downloaded/anti-shake-ads-0.2.1-test.apk

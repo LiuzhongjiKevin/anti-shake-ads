@@ -4,6 +4,12 @@
 
 > 当前是测试版。它不拦截传感器、不阻止跳转发生、不保证广告页面完全不闪现，也不保证所有应用都能恢复到原页面。它按用户选择的来源和时间窗工作，不是能够自动识别所有广告的分类器。
 
+## 0.2.1 更新
+
+“选择保护应用”新增 **一键全选**：勾选全部可保护应用，包括搜索框暂时隐藏的项目；仍可逐项取消，点击“保存”后生效，取消则不修改原设置。系统设置、桌面、输入法等继续按原规则排除。
+
+[0.2.1 更新说明](docs/RELEASE-0.2.1.md)。
+
 ## 0.2.0 更新
 
 首页只突出一个大按钮，支持开启、关闭和恢复保护。首次使用会引导选择应用与开启无障碍；完成后不必再从这里启动高德等应用。提供常驻通知的暂停/关闭控制、澎湃 OS 自启动/省电引导及自适应图标。
@@ -31,7 +37,7 @@
 
 | APK | 用途 |
 | --- | --- |
-| [直接下载主应用 APK](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/anti-shake-ads-0.2.0-test.apk) | 主应用，手机上显示“反摇一摇广告” |
+| [直接下载主应用 APK](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.1-test/anti-shake-ads-0.2.1-test.apk) | 主应用，手机上显示“反摇一摇广告” |
 | [fixture-source.apk](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/fixture-source.apk) | “跳转测试源”，模拟点击、自动和摇动跳转 |
 | [fixture-target.apk](https://github.com/LiuzhongjiKevin/anti-shake-ads/releases/download/v0.2.0-test/fixture-target.apk) | “模拟广告页”，无真实广告、无联网 |
 
