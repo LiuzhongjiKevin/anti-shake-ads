@@ -1,0 +1,7 @@
+/local-only/
+/tools/
+/share-staging/
+*.zip
+*.lnk
+PhoneLogCollector-build-*.exe
+SESSION.md
