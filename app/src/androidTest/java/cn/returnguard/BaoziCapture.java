@@ -39,6 +39,8 @@ public final class BaoziCapture extends Instrumentation {
    for(String name:new String[]{pkg,"cn.returnguard"}){Drawable d=getTargetContext().getPackageManager().getApplicationIcon(name);Bitmap b=Bitmap.createBitmap(256,256,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(b);d.setBounds(0,0,256,256);d.draw(canvas);try(FileOutputStream f=new FileOutputStream(new File(dir,name+".png"))){b.compress(Bitmap.CompressFormat.PNG,100,f);}b.recycle();}
    result.putString("stream","CAPTURE_SETUP_OK\n");finish(Activity.RESULT_OK,result);return;
   }
+  // Starting instrumentation restarts the target process: clear the stale crashed binding before reconnecting.
+  shell("settings put secure enabled_accessibility_services null");shell("settings put secure accessibility_enabled 0");SystemClock.sleep(500);
   shell("settings put secure enabled_accessibility_services cn.returnguard/.GuardService");shell("settings put secure accessibility_enabled 1");
   shell("am start -n cn.returnguard/.MainActivity");
   long ready=SystemClock.elapsedRealtime()+15000;while(!GuardService.running()&&SystemClock.elapsedRealtime()<ready)SystemClock.sleep(100);
