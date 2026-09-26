@@ -1,3 +1,0 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
- <instrumentation android:name="cn.returnguard.BaoziCapture" android:targetPackage="cn.returnguard" android:label="Requested Baozi emulator observation"/>
-</manifest>

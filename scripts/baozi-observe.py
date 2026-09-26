@@ -3,12 +3,16 @@ import subprocess,time,threading,tarfile,io,json,os
 from pathlib import Path
 OUT=Path('reports/baozi');OUT.mkdir(parents=True,exist_ok=True)
 def adb(*args,timeout=45,binary=False):
- p=subprocess.run(['adb',*args],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,check=True)
+ p=subprocess.run(['adb',*args],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout)
+ if p.returncode:
+  print('ADB FAILED',args,p.stdout.decode('utf8','replace'),p.stderr.decode('utf8','replace'),flush=True)
+  p.check_returncode()
  return p.stdout if binary else p.stdout.decode('utf-8','replace')
 pkg=os.environ['BAOZI_PACKAGE']
 guard='cn.returnguard'
 for apk in ['app/build/outputs/apk/debug/app-debug.apk','app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk','downloads/baozi.apk']:
  print(adb('install','-r',apk,timeout=180),flush=True)
+print(adb('shell','pm','list','instrumentation'),flush=True)
 setup=adb('shell','am','instrument','-w','-e','mode','setup','-e','package',pkg,'cn.returnguard.test/cn.returnguard.BaoziCapture',timeout=60)
 print(setup,flush=True)
 assert 'CAPTURE_SETUP_OK' in setup
