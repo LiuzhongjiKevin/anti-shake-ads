@@ -52,4 +52,4 @@ assert 'CAPTURE_OBSERVATION_OK' in output
 frames=json.loads((OUT/'frames.json').read_text())
 print('CAPTURE_SUMMARY',json.dumps({'frames':len(frames),'guard_connected_all':all(f['guard_connected'] for f in frames),'foreground_service_all':all(f['foreground_service'] for f in frames),'elapsed_ms':[f['actual_ms'] for f in frames]}),flush=True)
 
-assert all(f["guard_connected"] and f["foreground_service"] and f["guard_enabled"] for f in frames),"Guard was not continuously active; inspect frame flags"
+assert all(f["guard_connected"] and f["foreground_service"] and f["guard_enabled"] and f["source_selected"] for f in frames),"Guard was not continuously active; inspect frame flags"

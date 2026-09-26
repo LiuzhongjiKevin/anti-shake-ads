@@ -35,7 +35,7 @@ public final class BaoziCapture extends Instrumentation {
   ui=getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
   String pkg=args.getString("package");File dir=new File(getTargetContext().getFilesDir(),"baozi-capture");dir.mkdirs();
   if("setup".equals(args.getString("mode"))){
-   Prefs p=new Prefs(getTargetContext());p.data.edit().clear().putBoolean("enabled",true).putBoolean("background_guide_seen",true).putInt("seconds",30).commit();p.saveSources(new HashSet<>(Arrays.asList(pkg)));
+   Prefs p=new Prefs(getTargetContext());p.data.edit().clear().putBoolean("enabled",true).putBoolean("background_guide_seen",true).putInt("seconds",30).putStringSet("sources",new HashSet<>(Arrays.asList(pkg))).commit();
    for(String name:new String[]{pkg,"cn.returnguard"}){Drawable d=getTargetContext().getPackageManager().getApplicationIcon(name);Bitmap b=Bitmap.createBitmap(256,256,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(b);d.setBounds(0,0,256,256);d.draw(canvas);try(FileOutputStream f=new FileOutputStream(new File(dir,name+".png"))){b.compress(Bitmap.CompressFormat.PNG,100,f);}b.recycle();}
    result.putString("stream","CAPTURE_SETUP_OK\n");finish(Activity.RESULT_OK,result);return;
   }
@@ -57,7 +57,7 @@ public final class BaoziCapture extends Instrumentation {
    try(FileOutputStream f=new FileOutputStream(new File(dir,file))){b.compress(Bitmap.CompressFormat.PNG,100,f);}b.recycle();
    AccessibilityNodeInfo root=ui.getRootInActiveWindow();JSONArray tree=new JSONArray();nodes(root,tree,new int[]{300});
    write(new File(dir,String.format(Locale.ROOT,"ui-%03d.json",i)),tree.toString(2));
-   JSONObject frame=new JSONObject();frame.put("index",i);frame.put("actual_ms",actual);frame.put("file",file);frame.put("guard_connected",GuardService.running());frame.put("foreground_service",ProtectionNotificationService.running());frame.put("guard_enabled",new Prefs(getTargetContext()).enabled());frames.put(frame);
+   JSONObject frame=new JSONObject();frame.put("index",i);frame.put("actual_ms",actual);frame.put("file",file);frame.put("guard_connected",GuardService.running());frame.put("foreground_service",ProtectionNotificationService.running());frame.put("guard_enabled",new Prefs(getTargetContext()).enabled());frame.put("source_selected",new Prefs(getTargetContext()).sources().contains(pkg));frames.put(frame);
    if(i<14&&root!=null&&pkg.contentEquals(root.getPackageName()==null?"":root.getPackageName())&&consent(root)){JSONObject a=new JSONObject();a.put("second",i);a.put("action","Clicked exact consent button on isolated test app");actions.put(a);}
    if(root!=null)root.recycle();
    if(i==14){shell("am force-stop "+pkg);shell("input keyevent KEYCODE_HOME");}
