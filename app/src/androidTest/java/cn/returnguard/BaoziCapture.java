@@ -60,8 +60,6 @@ public final class BaoziCapture extends Instrumentation {
    JSONObject frame=new JSONObject();frame.put("index",i);frame.put("actual_ms",actual);frame.put("file",file);frame.put("guard_connected",GuardService.running());frame.put("foreground_service",ProtectionNotificationService.running());frame.put("guard_enabled",new Prefs(getTargetContext()).enabled());frame.put("source_selected",new Prefs(getTargetContext()).sources().contains(pkg));frames.put(frame);
    if(i<14&&root!=null&&pkg.contentEquals(root.getPackageName()==null?"":root.getPackageName())&&consent(root)){JSONObject a=new JSONObject();a.put("second",i);a.put("action","Clicked exact consent button on isolated test app");actions.put(a);}
    if(root!=null)root.recycle();
-   if(i==14){shell("am force-stop "+pkg);shell("input keyevent KEYCODE_HOME");}
-   if(i==15){shell("am start -n "+component);JSONObject a=new JSONObject();a.put("second",i);a.put("action","Cold launch after initial onboarding");actions.put(a);}
   }
   write(new File(dir,"frames.json"),frames.toString(2));write(new File(dir,"actions.json"),actions.toString(2));write(new File(dir,"guard-events.json"),new EventLog(getTargetContext()).read().toString(2));
   result.putString("stream","CAPTURE_OBSERVATION_OK frames=75\n");finish(Activity.RESULT_OK,result);
