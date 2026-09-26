@@ -10,6 +10,12 @@ public final class DiagnosticSmoke extends Instrumentation {
  private void check(boolean ok,String message){if(!ok)throw new AssertionError(message);}
  private AccessibilityEvent event(String cls){AccessibilityEvent e=AccessibilityEvent.obtain(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);e.setPackageName("ctrip.android.view");e.setClassName(cls);e.getText().add("SECRET_PAGE_TEXT");e.setContentDescription("SECRET_DESCRIPTION");return e;}
  @Override public void onStart(){Bundle result=new Bundle();try{
+  android.view.accessibility.AccessibilityManager manager=getTargetContext().getSystemService(android.view.accessibility.AccessibilityManager.class);
+  boolean metadataFound=false;
+  for(android.accessibilityservice.AccessibilityServiceInfo info:manager.getInstalledAccessibilityServiceList()){
+   if("cn.returnguard".equals(info.getResolveInfo().serviceInfo.packageName)){metadataFound=true;check((info.flags&android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS)!=0,"effective Android service config requests node IDs");}
+  }
+  check(metadataFound,"installed accessibility service metadata exists");
   Prefs prefs=new Prefs(getTargetContext());prefs.data.edit().clear().putBoolean("enabled",true).putStringSet("sources",java.util.Collections.singleton("ctrip.android.view")).commit();
   DiagnosticRecorder recorder=DiagnosticRecorder.get(getTargetContext());
   AccessibilityEvent home=event("ctrip.android.publicproduct.home.view.CtripHomeActivity"),ad=event("ctrip.android.ad.webview.MktH5ContainerV2");

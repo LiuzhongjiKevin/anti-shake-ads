@@ -19,7 +19,7 @@ public final class MainActivity extends Activity {
  private boolean setupPending(){return prefs.data.getBoolean("setup_requested",false);}
  private final Handler handler=new Handler(Looper.getMainLooper());
  private final Runnable ticker=new Runnable(){public void run(){if(setupPending()&&GuardService.running()&&!prefs.sources().isEmpty())activate();update();handler.postDelayed(this,1000);}};
- @Override public void onCreate(Bundle b){super.onCreate(b);prefs=new Prefs(this);}
+ @Override public void onCreate(Bundle b){super.onCreate(b);prefs=new Prefs(this);Object retained=getLastNonConfigurationInstance();if(retained instanceof JSONObject)pendingDiagnostic=(JSONObject)retained;}
  @Override public void onResume(){super.onResume();render();if(prefs.enabled()&&GuardService.running())ProtectionNotificationService.start(this);handler.post(ticker);}
  @Override public void onPause(){handler.removeCallbacks(ticker);super.onPause();}
  private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -105,6 +105,7 @@ public final class MainActivity extends Activity {
    try{startActivityForResult(intent,EXPORT_DIAGNOSTIC);dialog.dismiss();}catch(RuntimeException ex){pendingDiagnostic=null;message("无法打开文件保存界面，请检查系统文件应用。");}
   },false);dialog.show();
  }
+ @Override public Object onRetainNonConfigurationInstance(){return pendingDiagnostic;}
  @Override protected void onActivityResult(int request,int result,Intent intent){
   super.onActivityResult(request,result,intent);if(request!=EXPORT_DIAGNOSTIC)return;
   JSONObject data=pendingDiagnostic;pendingDiagnostic=null;
