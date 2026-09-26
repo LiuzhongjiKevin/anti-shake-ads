@@ -6,3 +6,4 @@ java -m jdk.compiler/com.sun.tools.javac.Main -encoding UTF-8 -d build/core-test
 "${JAVA_HOME:+$JAVA_HOME/bin/}java" -ea -cp build/core-tests cn.returnguard.core.GuardEngineTest
 java -ea -cp build/core-tests cn.returnguard.core.ProtectionStateTest
 java -ea -cp build/core-tests cn.returnguard.core.WindowReadinessTest
+java -ea -cp build/core-tests cn.returnguard.core.CtripProbeTest

@@ -41,9 +41,9 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
    if(pendingSource==null){pendingSource=engine.source();pendingTarget=engine.target();pendingAt=now;}pendingAttempts=engine.attempts();
    String current=activePackage();if(!prefs.active()||current==null||excluded.contains(current)){cancel();return;}
    if(!current.equals(engine.target())){handle(engine.tick(current,now));return;}
-   try{if(a==GuardEngine.Action.BACK)service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
-    else{Intent launch=service.getPackageManager().getLaunchIntentForPackage(engine.source());if(launch==null){finish("重新打开失败：来源无启动入口");engine.reset();return;}launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);service.startActivity(launch);}
-   }catch(RuntimeException e){finish("系统未执行返回／重新打开");engine.reset();}return;
+   try{if(a==GuardEngine.Action.BACK){boolean accepted=service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"BACK",engine.attempts(),current,accepted);}
+    else{Intent launch=service.getPackageManager().getLaunchIntentForPackage(engine.source());if(launch==null){finish("重新打开失败：来源无启动入口");engine.reset();return;}launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);service.startActivity(launch);DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"RELAUNCH",engine.attempts(),current,null);}
+   }catch(RuntimeException e){DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"ACTION_EXCEPTION",engine.attempts(),current,false);finish("系统未执行返回／重新打开");engine.reset();}return;
   }
   switch(a){
    case RETURNED:finish("已回到原应用（页面需人工确认）");break;
@@ -53,7 +53,7 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
    default:break;
   }
  }
- private void finish(String result){if(pendingSource!=null)log.add(pendingSource,pendingTarget,result,pendingAttempts,SystemClock.elapsedRealtime()-pendingAt);pendingSource=pendingTarget=null;pendingAttempts=0;}
+ private void finish(String result){DiagnosticRecorder.get(service).action(pendingSource,pendingTarget,"FINISH: "+result,pendingAttempts,null,null);if(pendingSource!=null)log.add(pendingSource,pendingTarget,result,pendingAttempts,SystemClock.elapsedRealtime()-pendingAt);pendingSource=pendingTarget=null;pendingAttempts=0;}
  void cancel(){readiness.clear();handler.removeCallbacks(sample);queued=false;finish("已停止：保护取消或系统窗口介入");engine.reset();}
  @Override public void onSharedPreferenceChanged(SharedPreferences p,String key){cancel();engine=new GuardEngine(prefs.window(),prefs.fallback());excluded=AppCatalog.exclusions(service);launchers=AppCatalog.launchers(service);}
  void close(){closed=true;cancel();prefs.data.unregisterOnSharedPreferenceChangeListener(this);try{service.unregisterReceiver(screenReceiver);}catch(IllegalArgumentException ignored){}}

@@ -81,8 +81,41 @@ public final class MainActivity extends Activity {
   new AlertDialog.Builder(this).setTitle("后台运行设置").setView(scroll).setPositiveButton("完成，返回主页",(d,w)->update()).show();
  }
  private void options(){
-  String[] items={"后台运行设置","保护规则与允许跳转","暂停一分钟 / 恢复","最近返回记录","测试与使用说明","开源与隐私","关闭保护"};
-  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 6:disableProtection();break;case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内部的广告页暂不自动处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.1 测试版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名和类型并执行返回；记录最多 100 条。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
+  String[] items={"后台运行设置","保护规则与允许跳转","暂停一分钟 / 恢复","最近返回记录","测试与使用说明","开源与隐私","关闭保护","携程诊断（仅记录）"};
+  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 7:diagnostics();break;case 6:disableProtection();break;case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内部的广告页暂不自动处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.2 诊断版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名和类型并执行返回；返回记录最多 100 条。手动开启携程诊断后，额外记录窗口类名、节点标识和保护状态，最多 800 条、120 秒，不自动处理应用内广告。导出由你选择保存位置。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
+ }
+ private static final int EXPORT_DIAGNOSTIC=73;
+ private JSONObject pendingDiagnostic;
+ private void diagnostics(){
+  DiagnosticRecorder recorder=DiagnosticRecorder.get(this);JSONObject data=recorder.snapshot();
+  LinearLayout l=column();
+  l.addView(text("仅观察携程，不自动返回应用内广告",18,TEXT));
+  l.addView(text("状态："+(recorder.active()?"记录中":"未在记录")+"\n已记录 "+data.optJSONArray("events").length()+" 条 · 丢弃旧记录 "+data.optInt("droppedEvents")+" 条\n容器类名事件 "+data.optInt("containerClassEventCount")+" 次 · 候选事件 "+data.optInt("candidateCount")+" 次（不是广告次数）",14,MUTED));
+  l.addView(text("开始后两分钟自动停止。只记录携程窗口类名、节点标识和保护状态；不读取文字、网址或截图。跨应用保护仍按原设置运行。\n\n请分别采集开屏广告与正常页面，每轮结束立即导出。记录仅在内存中，进程重启会丢失；新一轮会清空上一轮。",14,MUTED));
+  AlertDialog dialog=new AlertDialog.Builder(this).setTitle("携程诊断").setView(l).setNegativeButton("关闭",null).create();
+  button(l,"开始新一轮（120 秒）",()->{
+   if(!GuardService.running()){message("请先在系统设置开启无障碍服务。诊断本身不要求打开跨应用保护。");return;}
+   new AlertDialog.Builder(this).setMessage("开始新的携程诊断？上一轮内存记录将清空，请先导出需要保留的记录。").setNegativeButton("取消",null).setPositiveButton("开始",(d,w)->{recorder.start();dialog.dismiss();message("已开始。请从桌面打开携程并复现，完成后回来停止并导出。诊断不自动返回应用内页面。");}).show();
+  },true);
+  button(l,"停止记录",()->{recorder.stop("user_stop");dialog.dismiss();diagnostics();},false);
+  button(l,"停止并导出 JSON",()->{
+   recorder.stop("export");pendingDiagnostic=recorder.snapshot();
+   if(pendingDiagnostic.optString("sessionId").isEmpty()){message("还没有诊断记录，请先开始一轮。");return;}
+   Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/json").putExtra(Intent.EXTRA_TITLE,"returnguard-diagnostic-"+System.currentTimeMillis()+".json");
+   try{startActivityForResult(intent,EXPORT_DIAGNOSTIC);dialog.dismiss();}catch(RuntimeException ex){pendingDiagnostic=null;message("无法打开文件保存界面，请检查系统文件应用。");}
+  },false);dialog.show();
+ }
+ @Override protected void onActivityResult(int request,int result,Intent intent){
+  super.onActivityResult(request,result,intent);if(request!=EXPORT_DIAGNOSTIC)return;
+  JSONObject data=pendingDiagnostic;pendingDiagnostic=null;
+  if(result!=RESULT_OK||intent==null||intent.getData()==null)return;
+  if(data==null){message("导出中断：进程可能已重启，请重新采集。");return;}
+  android.net.Uri uri=intent.getData();new Thread(()->{
+   String outcome;
+   try(java.io.OutputStream out=getContentResolver().openOutputStream(uri,"wt")){if(out==null)throw new java.io.IOException("No stream");DiagnosticRecorder.write(data,out);outcome="诊断 JSON 已保存，可和本地日志一起发送分析。";}
+   catch(Exception ex){outcome="保存失败，请重新选择保存位置。";}
+   final String message=outcome;runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())message(message);});
+  },"diagnostic-export").start();
  }
  private void policy(){
   LinearLayout l=column();l.addView(text("进入所选应用后的保护时长",16,TEXT));RadioGroup group=new RadioGroup(this);group.setOrientation(LinearLayout.HORIZONTAL);
