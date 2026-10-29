@@ -15,6 +15,9 @@ final class Prefs {
  void resume(){data.edit().remove("pauseUntil").remove("pauseStart").remove("pauseBoot").apply();}
  long window(){int s=data.getInt("seconds",10);return (s==5||s==10||s==20||s==30?s:10)*1000L;}
  boolean fallback(){return data.getBoolean("fallback",false);}
+ /** Extra ad landing-page Activity rules: an exact class name, or a prefix ending in '*'. */
+ Set<String> adRules(){return new HashSet<>(data.getStringSet("ad_rules",new HashSet<>()));}
+ void saveAdRules(Set<String> v){data.edit().putStringSet("ad_rules",new HashSet<>(v)).apply();}
  Set<String> sources(){return new HashSet<>(data.getStringSet("sources",new HashSet<>()));}
  Set<String> allowed(String s){return new HashSet<>(data.getStringSet("allow:"+s,new HashSet<>()));}
  boolean allowed(String s,String t){return s!=null&&allowed(s).contains(t);}

@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
  }
  private void options(){
   String[] items={"后台运行设置","保护规则与允许跳转","暂停一分钟 / 恢复","最近返回记录","测试与使用说明","开源与隐私","关闭保护","携程诊断（仅记录）"};
-  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 7:diagnostics();break;case 6:disableProtection();break;case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内部的广告页暂不自动处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.2 诊断版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名和类型并执行返回；返回记录最多 100 条。手动开启携程诊断后，额外记录窗口类名、节点标识和保护状态，最多 800 条、120 秒，不自动处理应用内广告。导出由你选择保存位置。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
+  new AlertDialog.Builder(this).setTitle("设置").setItems(items,(d,i)->{switch(i){case 7:diagnostics();break;case 6:disableProtection();break;case 0:background();break;case 1:policy();break;case 2:if(prefs.paused())prefs.resume();else if(prefs.enabled())prefs.pause();update();break;case 3:logs();break;case 4:message("1. 开启保护，选择高德地图等应用。\n2. 在系统设置中开启无障碍，返回完成后台设置。\n3. 从桌面重新打开高德，开屏广告跨应用跳转时尝试返回。\n\n保护可能影响正常登录、支付和分享，可先从通知暂停一分钟。应用内只处理已知广告 SDK 的落地页，其余应用内网页暂不处理。\n\n测试版只验证了模拟跳转；真实高德广告和澎湃 OS 真机效果仍需验证。");break;default:new AlertDialog.Builder(this).setTitle("本地运行，随时关闭").setMessage("0.2.2 诊断版\n不联网、不保存截图或输入内容。无障碍读取活动窗口的包名、类型和页面类名并执行返回；返回记录最多 100 条。手动开启携程诊断后，额外记录窗口类名、节点标识和保护状态，最多 800 条、120 秒，不自动处理应用内广告。导出由你选择保存位置。\n后台状态使用常驻服务，不是 VPN，不接管网络。系统授权需本人开启，无法承诺永不被系统关闭。").setPositiveButton("开源许可",(a,n)->licenses()).setNegativeButton("关闭",null).show();}}).setNegativeButton("关闭",null).show();
  }
  private static final int EXPORT_DIAGNOSTIC=73;
  private JSONObject pendingDiagnostic;
@@ -121,8 +121,8 @@ public final class MainActivity extends Activity {
  private void policy(){
   LinearLayout l=column();l.addView(text("进入所选应用后的保护时长",16,TEXT));RadioGroup group=new RadioGroup(this);group.setOrientation(LinearLayout.HORIZONTAL);
   for(int sec:new int[]{5,10,20,30}){RadioButton r=new RadioButton(this);r.setId(sec);r.setText(sec+"秒");r.setTextColor(TEXT);group.addView(r,new RadioGroup.LayoutParams(0,dp(52),1));}group.check((int)(prefs.window()/1000));l.addView(group);group.setOnCheckedChangeListener((v,id)->{prefs.data.edit().putInt("seconds",id).apply();update();});
-  button(l,"管理允许跳转的目标",this::pickSource,false);Switch fallback=new Switch(this);fallback.setText("返回失败时重新打开来源");fallback.setTextColor(TEXT);fallback.setMinHeight(dp(56));fallback.setChecked(prefs.fallback());l.addView(fallback);fallback.setOnCheckedChangeListener((v,c)->prefs.data.edit().putBoolean("fallback",c).apply());
-  l.addView(text("重新打开可能回到首页，默认关闭。正常支付、登录、分享前可暂停保护。",13,MUTED));new AlertDialog.Builder(this).setTitle("保护规则").setView(l).setPositiveButton("完成",null).show();
+  button(l,"管理允许跳转的目标",this::pickSource,false);Switch fallback=new Switch(this);fallback.setText("跨应用返回失败时重新打开来源");fallback.setTextColor(TEXT);fallback.setMinHeight(dp(56));fallback.setChecked(prefs.fallback());l.addView(fallback);fallback.setOnCheckedChangeListener((v,c)->prefs.data.edit().putBoolean("fallback",c).apply());
+  l.addView(text("开启后，跳到其他应用时第二步改为重新打开来源，通常回到原页面，也可能回到首页。默认关闭。正常支付、登录、分享前可暂停保护。",13,MUTED));new AlertDialog.Builder(this).setTitle("保护规则").setView(l).setPositiveButton("完成",null).show();
  }
  private void licenses(){
   try(java.io.InputStream input=getResources().openRawResource(R.raw.third_party_notices);java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){

@@ -2,8 +2,10 @@ package cn.returnguard;
 import android.accessibilityservice.AccessibilityService;
 import android.app.KeyguardManager;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.os.*;
 import android.view.accessibility.*;
+import cn.returnguard.core.AdPageClassifier;
 import cn.returnguard.core.GuardEngine;
 import cn.returnguard.core.WindowReadiness;
 import java.util.*;
@@ -13,11 +15,22 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
  private final Handler handler=new Handler(Looper.getMainLooper());private Set<String> excluded,launchers;private GuardEngine engine;
  private final WindowReadiness readiness=new WindowReadiness();
  private boolean transientWindow;
+ // Last Activity reported per package. Entries are dropped after every action so a stale ad class never causes another Back.
+ private final Map<String,String> activities=new HashMap<>();private final Map<String,Boolean> activityClasses=new HashMap<>();
  private boolean closed,queued;private String pendingSource,pendingTarget;private long pendingAt;private int pendingAttempts;
  private final Runnable sample=this::sample;
  private final BroadcastReceiver screenReceiver=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){cancel();}};
- GuardController(GuardService s){service=s;prefs=new Prefs(s);log=new EventLog(s);excluded=AppCatalog.exclusions(s);launchers=AppCatalog.launchers(s);engine=new GuardEngine(prefs.window(),prefs.fallback());prefs.data.registerOnSharedPreferenceChangeListener(this);IntentFilter f=new IntentFilter(Intent.ACTION_SCREEN_OFF);if(Build.VERSION.SDK_INT>=33)s.registerReceiver(screenReceiver,f,Context.RECEIVER_NOT_EXPORTED);else s.registerReceiver(screenReceiver,f);}
- void onWindowEvent(AccessibilityEvent e){if(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED&&e.getPackageName()!=null&&launchers.contains(e.getPackageName().toString())){cancel();return;}if(!closed&&(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED||e.getEventType()==AccessibilityEvent.TYPE_WINDOWS_CHANGED))queue(40);}
+ GuardController(GuardService s){service=s;prefs=new Prefs(s);log=new EventLog(s);excluded=AppCatalog.exclusions(s);launchers=AppCatalog.launchers(s);engine=newEngine();prefs.data.registerOnSharedPreferenceChangeListener(this);IntentFilter f=new IntentFilter(Intent.ACTION_SCREEN_OFF);if(Build.VERSION.SDK_INT>=33)s.registerReceiver(screenReceiver,f,Context.RECEIVER_NOT_EXPORTED);else s.registerReceiver(screenReceiver,f);}
+ private GuardEngine newEngine(){return new GuardEngine(prefs.window(),prefs.fallback(),new AdPageClassifier(prefs.adRules()));}
+ /** Window-state events also fire for dialogs and views; only classes the package declares as Activities are kept. */
+ private boolean isActivity(String pkg,String cls){
+  String key=pkg+"/"+cls;Boolean known=activityClasses.get(key);if(known!=null)return known;
+  boolean found;try{service.getPackageManager().getActivityInfo(new ComponentName(pkg,cls),0);found=true;}catch(PackageManager.NameNotFoundException|RuntimeException e){found=false;}
+  if(activityClasses.size()>500)activityClasses.clear();activityClasses.put(key,found);return found;
+ }
+ private String activity(String pkg){return pkg==null?null:activities.get(pkg);}
+ void onWindowEvent(AccessibilityEvent e){if(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED&&e.getPackageName()!=null&&launchers.contains(e.getPackageName().toString())){cancel();return;}
+  if(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED&&e.getPackageName()!=null&&e.getClassName()!=null){String pkg=e.getPackageName().toString(),cls=e.getClassName().toString();if(isActivity(pkg,cls))activities.put(pkg,cls);}if(!closed&&(e.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED||e.getEventType()==AccessibilityEvent.TYPE_WINDOWS_CHANGED))queue(40);}
  private void queue(long delay){if(!queued&&!closed){queued=true;handler.postDelayed(sample,delay);}}
  private String activePackage(){
   transientWindow=false;
@@ -34,13 +47,14 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
    }if(active==null)transientWindow=true;return active;
   }catch(RuntimeException e){return null;}
  }
- private void sample(){queued=false;if(closed)return;if(!prefs.active()){cancel();return;}String p=activePackage();if(readiness.shouldDefer(p==null&&transientWindow,SystemClock.elapsedRealtime())){queue(75);return;}handle(engine.update(p,p!=null&&excluded.contains(p),p!=null&&prefs.sources().contains(p),prefs.allowed(engine.source(),p),SystemClock.elapsedRealtime()));if(engine.recovering())queue(100);}
+ private void sample(){queued=false;if(closed)return;if(!prefs.active()){cancel();return;}String p=activePackage();if(readiness.shouldDefer(p==null&&transientWindow,SystemClock.elapsedRealtime())){queue(75);return;}handle(engine.update(p,activity(p),p!=null&&excluded.contains(p),p!=null&&prefs.sources().contains(p),prefs.allowed(engine.source(),p),SystemClock.elapsedRealtime()));if(engine.recovering())queue(100);}
  private void handle(GuardEngine.Action a){
   if(a==GuardEngine.Action.NONE)return;long now=SystemClock.elapsedRealtime();
   if(a==GuardEngine.Action.BACK||a==GuardEngine.Action.RELAUNCH){
    if(pendingSource==null){pendingSource=engine.source();pendingTarget=engine.target();pendingAt=now;}pendingAttempts=engine.attempts();
    String current=activePackage();if(!prefs.active()||current==null||excluded.contains(current)){cancel();return;}
-   if(!current.equals(engine.target())){handle(engine.tick(current,now));return;}
+   if(!current.equals(engine.target())){handle(engine.tick(current,activity(current),now));return;}
+   activities.remove(engine.source());activities.remove(engine.target());
    try{if(a==GuardEngine.Action.BACK){boolean accepted=service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"BACK",engine.attempts(),current,accepted);}
     else{Intent launch=service.getPackageManager().getLaunchIntentForPackage(engine.source());if(launch==null){finish("重新打开失败：来源无启动入口");engine.reset();return;}launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);service.startActivity(launch);DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"RELAUNCH",engine.attempts(),current,null);}
    }catch(RuntimeException e){DiagnosticRecorder.get(service).action(engine.source(),engine.target(),"ACTION_EXCEPTION",engine.attempts(),current,false);finish("系统未执行返回／重新打开");engine.reset();}return;
@@ -54,7 +68,7 @@ final class GuardController implements SharedPreferences.OnSharedPreferenceChang
   }
  }
  private void finish(String result){DiagnosticRecorder.get(service).action(pendingSource,pendingTarget,"FINISH: "+result,pendingAttempts,null,null);if(pendingSource!=null)log.add(pendingSource,pendingTarget,result,pendingAttempts,SystemClock.elapsedRealtime()-pendingAt);pendingSource=pendingTarget=null;pendingAttempts=0;}
- void cancel(){readiness.clear();handler.removeCallbacks(sample);queued=false;finish("已停止：保护取消或系统窗口介入");engine.reset();}
- @Override public void onSharedPreferenceChanged(SharedPreferences p,String key){cancel();engine=new GuardEngine(prefs.window(),prefs.fallback());excluded=AppCatalog.exclusions(service);launchers=AppCatalog.launchers(service);}
+ void cancel(){readiness.clear();activities.clear();handler.removeCallbacks(sample);queued=false;finish("已停止：保护取消或系统窗口介入");engine.reset();}
+ @Override public void onSharedPreferenceChanged(SharedPreferences p,String key){cancel();engine=newEngine();excluded=AppCatalog.exclusions(service);launchers=AppCatalog.launchers(service);}
  void close(){closed=true;cancel();prefs.data.unregisterOnSharedPreferenceChangeListener(this);try{service.unregisterReceiver(screenReceiver);}catch(IllegalArgumentException ignored){}}
 }
