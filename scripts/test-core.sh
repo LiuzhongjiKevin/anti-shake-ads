@@ -7,3 +7,4 @@ java -m jdk.compiler/com.sun.tools.javac.Main -encoding UTF-8 -d build/core-test
 java -ea -cp build/core-tests cn.returnguard.core.ProtectionStateTest
 java -ea -cp build/core-tests cn.returnguard.core.WindowReadinessTest
 java -ea -cp build/core-tests cn.returnguard.core.CtripProbeTest
+java -ea -cp build/core-tests cn.returnguard.core.AdPageClassifierTest
